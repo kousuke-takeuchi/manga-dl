@@ -2,10 +2,17 @@ import os
 import wget
 import time
 import click
+import re, csv
+from random import uniform, randint
 
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException
 
 
 
@@ -45,6 +52,7 @@ def download_image(url, dest_dir, page, idx):
     # except urllib.error.URLError as e:
     #     print(e)
 
+
 def crawl_page(driver, url, dest_dir, page=1, timeout=10):
     target_url = '{}&paged={}'.format(url, page)
     driver.get(target_url)
@@ -53,6 +61,10 @@ def crawl_page(driver, url, dest_dir, page=1, timeout=10):
         sleep_count += 1
         time.sleep(1)
         print('waiting...')
+        if sleep_count == timeout:
+            success = brute_force_attach_recaptcha(driver)
+            if success:
+                sleep_count = 0
         if sleep_count > timeout:
             driver.save_screenshot('error-screen.png')
             raise Exception('Time out')
@@ -65,8 +77,9 @@ def crawl_page(driver, url, dest_dir, page=1, timeout=10):
         crawl_page(driver, url, dest_dir, page=next_page)
 
 @click.command()
-@click.argument('url')
-def command(url):
+@click.argument('p')
+def command(p):
+    url = 'http://mangamura.org/old_viewer?p={}'.format(p)
     driver = load_driver()
     print("Chrome Browser Initialized in Headless Mode")
     dest_dir = os.path.join(os.path.dirname(__file__), 'images')
